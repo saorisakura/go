@@ -1,0 +1,50 @@
+// 在 `devcontainer.json` 文件中，除了 `postCreateCommand` 之外，还有其他生命周期参数可以使用。以下是一些常见的生命周期参数及其示例：
+//
+//1. `initializeCommand`：在容器创建之前运行的命令。
+//2. `onCreateCommand`：在容器创建之后、但在任何其他命令之前运行的命令。
+//3. `updateContentCommand`：在容器内容更新时运行的命令。
+//4. `postStartCommand`：在容器启动之后运行的命令。
+//5. `postAttachCommand`：在用户附加到容器之后运行的命令。
+//
+//以下是这些参数的示例：
+//
+//```jsonc
+//{
+//  "name": "finops",
+//  "dockerFile": "Dockerfile",
+//  "settings": {
+//    "terminal.integrated.shell.linux": "/bin/bash"
+//  },
+//  "extensions": [],
+//  "runArgs": [
+//    "--privileged"
+//  ],
+//  "initializeCommand": "echo Initializing...",
+//  "onCreateCommand": "echo Container created",
+//  "updateContentCommand": "echo Content updated",
+//  "postStartCommand": "echo Container started",
+//  "postAttachCommand": "echo Attached to container",
+//  "postCreateCommand": "mkdir -p ~/.pip && cp .devcontainer/pip.conf ~/.pip/pip.conf && pip install -r requirements.txt",
+//  "remoteUser": "vscode"
+//}
+//```
+//
+//这些参数可以帮助你在不同的生��周期阶段执行特定的命令。
+
+{
+  "name": "finops",
+  "dockerFile": "Dockerfile",
+//  "image": "",
+
+  "settings": {
+    "terminal.integrated.shell.linux": "/bin/bash"
+  },
+
+  "extensions": [],
+
+  "runArgs": [
+    "--privileged"
+  ],
+  "postCreateCommand": "echo post",
+  "remoteUser": "vscode"
+}

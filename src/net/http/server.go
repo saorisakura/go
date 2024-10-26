@@ -1933,6 +1933,7 @@ func isCommonNetReadError(err error) bool {
 	return false
 }
 
+// 每个连接在后台一直运行的
 // Serve a new connection.
 func (c *conn) serve(ctx context.Context) {
 	if ra := c.rwc.RemoteAddr(); ra != nil {
@@ -2208,7 +2209,147 @@ func requestBodyRemains(rc io.ReadCloser) bool {
 		panic("unexpected type " + fmt.Sprintf("%T", rc))
 	}
 }
+// 函数指针
+// #include <stdio.h>
 
+// 声明一个函数，该函数将返回两个整数的和
+// int add(int a, int b) {
+//     return a + b;
+// }
+// 
+// int main() {
+//     // 声明一个函数指针，该指针指向返回整型、带有两个整型参数的函数
+//     int (*ptr)(int, int);
+// 
+//     // 将函数指针指向add函数
+//     ptr = add;
+// 
+//     int result = ptr(10, 20); // 通过函数指针调用add函数
+// 
+//     printf("Result: %d\n", result);
+// 
+//     return 0;
+// }
+// 在 Go 语言中，函数也是一种类型，可以被赋值给变量，作为参数传递给其他函数，以及作为其他函数的返回值。函数指针是指向函数的指针，可以用来间接调用函数。下面是一个简单的示例说明如何在 Go 中使用函数指针：
+// 
+// ```go
+// package main
+// 
+// import "fmt"
+// 
+// // 定义一个函数类型
+// type operation func(int, int) int
+// 
+// // 加法函数
+// func add(a, b int) int {
+// 	return a + b
+// }
+// 
+// // 减法函数
+// func subtract(a, b int) int {
+// 	return a - b
+// }
+// 
+// func main() {
+// 	// 声明一个函数指针变量
+// 	var opPtr operation
+// 
+// 	// 将函数指针指向加法函数
+// 	opPtr = add
+// 	result := opPtr(5, 3)
+// 	fmt.Println("5 + 3 =", result)
+// 
+// 	// 将函数指针指向减法函数
+// 	opPtr = subtract
+// 	result = opPtr(5, 3)
+// 	fmt.Println("5 - 3 =", result)
+// }
+// ```
+// 
+// 在这个示例中，我们定义了一个 `operation` 类型，它是一个接受两个整数参数并返回一个整数的函数类型。然后我们定义了两个具体的函数 `add` 和 `subtract`，分别实现加法和减法运算。
+// 
+// 在 `main` 函数中，我们声明了一个函数指针变量 `opPtr`，将其分别指向 `add` 和 `subtract` 函数，然后通过函数指针间接调用这两个函数，并输出结果。
+// 
+// 函数指针在 Go 中可以用于实现回调函数、动态切换函数实现等场景，是一个非常有用的特性。
+// 
+// 
+// 在 Go 中，定义一个没有返回值的函数指针可以通过声明一个函数类型，其返回类型为 `void` 或 `nil`（在 Go 中通常用 `nil` 表示没有返回值），然后使用这个函数类型来声明函数指针变量。虽然 Go 中没有明确的 `void` 类型，但可以使用 `func()` // 表示一个没有参数也没有返回值的函数类型。
+// 
+// 下面是一个示例代码，演示如何定义一个没有返回值的函数指针：
+// 
+// ```go
+// package main
+// 
+// import "fmt"
+// 
+// // 定义一个没有返回值的函数类型
+// type voidFunc func()
+// 
+// // 输出Hello的函数
+// func sayHello() {
+// 	fmt.Println("Hello")
+// }
+// 
+// func main() {
+// 	// 声明一个没有返回值的函数指针变量
+// 	var voidPtr voidFunc
+// 
+// 	// 将函数指针指向sayHello函数
+// 	voidPtr = sayHello
+// 
+// 	// 通过函数指针调用sayHello函数
+// 	voidPtr()
+// }
+// ```
+// 
+// 在这个示例中，我们定义了一个 `voidFunc` 类型，表示一个没有返回值的函数类型。然后定义了 `sayHello` 函数，用于输出 "Hello"。
+// 
+// 在 `main` 函数中，我们声明了一个函数指针变量 `voidPtr`，并将其指向 `sayHello` 函数。最后通过函数指针调用 `sayHello` 函数，实现了间接调用没有返回值的函数。
+// 
+// 在 Go 中，函数指针可以用于实现接口。你可以定义一个没有返回值的函数指针，并为其实现一个接口，使得这个函数指针符合接口的要求。下面是一个示例代码，演示如何定义一个没有返回值的函数指针，并为其实现一个接口：
+// 
+// ```go
+// package main
+// 
+// import "fmt"
+// 
+// // 定义一个没有返回值的函数类型
+// type voidFunc func()
+// 
+// // 定义一个接口
+// type Printer interface {
+// 	Print()
+// }
+// 
+// // 实现 Printer 接口的方法
+// func (f voidFunc) Print() {
+// 	f()
+// }
+// 
+// // 输出Hello的函数
+// func sayHello() {
+// 	fmt.Println("Hello")
+// }
+// 
+// func main() {
+// 	// 声明一个没有返回值的函数指针变量
+// 	var voidPtr voidFunc
+// 
+// 	// 将函数指针指向sayHello函数
+// 	voidPtr = sayHello
+// 
+// 	// 将函数指针转换为接口类型
+// 	printer := Printer(voidPtr)
+// 
+// 	// 通过接口调用Print方法，间接调用sayHello函数
+// 	printer.Print()
+// }
+// ```
+// 
+// 在这个示例中，我们定义了一个 `voidFunc` 类型，表示一个没有返回值的函数类型。接着定义了一个 `Printer` 接口，其中包含一个名为 `Print` 的方法。然后我们为 `voidFunc` 类型定义了 `Print` 方法，使其符合 `Printer` 接口的要求。
+// 
+// 在 `main` 函数中，我们声明了一个没有返回值的函数指针变量 `voidPtr`，并将其指向 `sayHello` 函数。然后将函数指针转换为 `Printer` 接口类型，并通过接口调用 `Print` 方法，间接调用了 `sayHello` 函数。
+// 
 // The HandlerFunc type is an adapter to allow the use of
 // ordinary functions as HTTP handlers. If f is a function
 // with the appropriate signature, HandlerFunc(f) is a

@@ -1155,6 +1155,7 @@ func readRequest(b *bufio.Reader) (req *Request, err error) {
 
 	req.Close = shouldClose(req.ProtoMajor, req.ProtoMinor, req.Header, false)
 
+	// 读取body in transfer.go
 	err = readTransfer(req, b)
 	if err != nil {
 		return nil, err

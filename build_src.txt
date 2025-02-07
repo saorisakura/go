@@ -45,3 +45,627 @@
    ```
 
 通过以上步骤，你应该能够解决`GOROOT_BOOTSTRAP`相关的问题并成功构建Go源码。
+
+好的，以下是一个使用文本图描述的Go语言程序引导启动流程。这个流程展示了从程序启动到执行用户的`main`函数的主要步骤。
+
+### Go程序引导启动流程
+
+```plaintext
++---------------------+
+|  Shell (bash, zsh)  |
++---------------------+
+          |
+          v
++---------------------+
+|  execve system call |
++---------------------+
+          |
+          v
++---------------------+
+|  Kernel (Linux)     |
++---------------------+
+          |
+          v
++---------------------+
+|  Loader             |
+|  - Loads ELF header |
+|  - Loads segments   |
+|  - Resolves symbols |
++---------------------+
+          |
+          v
++---------------------+
+|  _start (assembly)  |
+|  - Sets up stack    |
+|  - Calls runtime    |
++---------------------+
+          |
+          v
++---------------------+
+|  runtime·rt0_go     |
+|  - Initializes      |
+|    runtime          |
+|  - Calls main       |
++---------------------+
+          |
+          v
++---------------------+
+|  runtime.main       |
+|  - Initializes      |
+|    goroutines       |
+|  - Calls user main  |
++---------------------+
+          |
+          v
++---------------------+
+|  User main          |
+|  - User code        |
++---------------------+
+```
+
+### 详细步骤
+
+1. **Shell**：
+   - 用户在命令行输入`go_program`并按下回车键。
+   - Shell调用`execve`系统调用来加载Go程序的可执行文件。
+
+2. **execve系统调用**：
+   - `execve`系统调用将控制权交给内核，内核开始加载可执行文件。
+
+3. **Kernel (Linux)**：
+   - 内核读取可执行文件的ELF头，确定文件类型和入口点。
+   - 内核为新进程分配内存空间，设置进程控制块（PCB），并初始化进程的堆栈。
+
+4. **Loader**：
+   - 加载器读取ELF文件的段信息，将代码段和数据段加载到内存中。
+   - 加载器解析动态链接库（如`libc`），并将它们加载到内存中。
+   - 加载器将程序的入口点设置为`_start`符号地址。
+
+5. **_start (assembly)**：
+   - `_start`符号是程序的入口点，由汇编代码实现。
+   - `_start`设置栈指针，准备调用Go运行时的初始化函数。
+   - `_start`调用`runtime·rt0_go`函数。
+
+6. **runtime·rt0_go**：
+   - `runtime·rt0_go`是Go运行时的初始化函数。
+   - 它初始化Go运行时环境，包括内存分配器、垃圾收集器和调度器。
+   - `runtime·rt0_go`调用`runtime.main`函数。
+
+7. **runtime.main**：
+   - `runtime.main`是Go运行时的主函数。
+   - 它初始化所有goroutine，并启动调度器。
+   - `runtime.main`最终调用用户定义的`main`函数。
+
+8. **User main**：
+   - 用户定义的`main`函数是程序的入口点。
+   - 用户的Go代码在这里执行。
+
+### 示例代码
+以下是与上述流程对应的部分代码示例：
+
+#### 汇编代码（`rt0_linux_amd64.s`）
+```assembly
+
+
+#include "textflag.h"
+
+TEXT _rt0_amd64_linux(SB),NOSPLIT,$-8
+    JMP _rt0_amd64(SB)
+```
+
+#### 汇编代码（`rt0_amd64.s`）
+```assembly
+
+
+#include "textflag.h"
+
+TEXT _rt0_amd64(SB),NOSPLIT,$-8
+    MOVQ $runtime·rt0_go(SB), AX
+    JMP AX
+```
+
+#### Go运行时初始化（`asm_amd64.s`）
+```assembly
+
+
+TEXT runtime·rt0_go(SB),NOSPLIT,$0
+    // 进行运行时初始化
+    CALL runtime·args(SB)
+    CALL runtime·osinit(SB)
+    CALL runtime·schedinit(SB)
+    // 调用用户的main函数
+    MOVQ $runtime·mainPC(SB), AX
+    JMP AX
+```
+
+### 总结
+通过上述文本图和代码示例，我们可以清晰地看到Go程序从启动到执行用户`main`函数的整个引导流程。这个流程涉及从Shell调用、内核加载、汇编初始化到Go运行时环境的设置，最终执行用户的Go代码。
+
+好的，作为C语言专家，我可以帮助你使用C语言模拟Go语言的并发调度。我们将使用`epoll`来监听网络事件，并使用队列来实现异步任务。我们将设置`epoll_wait`的超时时间为10秒，如果在这段时间内没有网络事件，就处理事件队列中的任务。线程模型将使用主从模型，主线程只管理从线程并分发任务到从线程，从线程处理各类事件。
+
+### 示例代码
+
+#### 1. 任务队列
+
+首先，我们定义一个任务队列，用于存储待处理的任务。
+
+```c
+
+
+#ifndef TASK_QUEUE_H
+#define TASK_QUEUE_H
+
+#include <pthread.h>
+#include <stdlib.h>
+
+typedef struct task {
+    void (*function)(void *arg);
+    void *arg;
+    struct task *next;
+} task_t;
+
+typedef struct {
+    task_t *front;
+    task_t *rear;
+    pthread_mutex_t mutex;
+    pthread_cond_t cond;
+} task_queue_t;
+
+void task_queue_init(task_queue_t *queue) {
+    queue->front = queue->rear = NULL;
+    pthread_mutex_init(&queue->mutex, NULL);
+    pthread_cond_init(&queue->cond, NULL);
+}
+
+void task_queue_push(task_queue_t *queue, void (*function)(void *), void *arg) {
+    task_t *task = (task_t *)malloc(sizeof(task_t));
+    task->function = function;
+    task->arg = arg;
+    task->next = NULL;
+
+    pthread_mutex_lock(&queue->mutex);
+    if (queue->rear == NULL) {
+        queue->front = queue->rear = task;
+    } else {
+        queue->rear->next = task;
+        queue->rear = task;
+    }
+    pthread_cond_signal(&queue->cond);
+    pthread_mutex_unlock(&queue->mutex);
+}
+
+task_t *task_queue_pop(task_queue_t *queue) {
+    pthread_mutex_lock(&queue->mutex);
+    while (queue->front == NULL) {
+        pthread_cond_wait(&queue->cond, &queue->mutex);
+    }
+    task_t *task = queue->front;
+    queue->front = queue->front->next;
+    if (queue->front == NULL) {
+        queue->rear = NULL;
+    }
+    pthread_mutex_unlock(&queue->mutex);
+    return task;
+}
+
+void task_queue_destroy(task_queue_t *queue) {
+    pthread_mutex_destroy(&queue->mutex);
+    pthread_cond_destroy(&queue->cond);
+}
+
+#endif // TASK_QUEUE_H
+```
+
+#### 2. 线程池
+
+接下来，我们定义一个线程池，用于处理任务队列中的任务。
+
+```c
+
+
+#ifndef THREAD_POOL_H
+#define THREAD_POOL_H
+
+#include "task_queue.h"
+#include <pthread.h>
+
+typedef struct {
+    pthread_t *threads;
+    int thread_count;
+    task_queue_t task_queue;
+    int stop;
+} thread_pool_t;
+
+void *thread_pool_worker(void *arg) {
+    thread_pool_t *pool = (thread_pool_t *)arg;
+    while (!pool->stop) {
+        task_t *task = task_queue_pop(&pool->task_queue);
+        if (task != NULL) {
+            task->function(task->arg);
+            free(task);
+        }
+    }
+    return NULL;
+}
+
+void thread_pool_init(thread_pool_t *pool, int thread_count) {
+    pool->thread_count = thread_count;
+    pool->stop = 0;
+    pool->threads = (pthread_t *)malloc(thread_count * sizeof(pthread_t));
+    task_queue_init(&pool->task_queue);
+
+    for (int i = 0; i < thread_count; i++) {
+        pthread_create(&pool->threads[i], NULL, thread_pool_worker, pool);
+    }
+}
+
+void thread_pool_add_task(thread_pool_t *pool, void (*function)(void *), void *arg) {
+    task_queue_push(&pool->task_queue, function, arg);
+}
+
+void thread_pool_destroy(thread_pool_t *pool) {
+    pool->stop = 1;
+    for (int i = 0; i < pool->thread_count; i++) {
+        pthread_cond_broadcast(&pool->task_queue.cond);
+    }
+    for (int i = 0; i < pool->thread_count; i++) {
+        pthread_join(pool->threads[i], NULL);
+    }
+    free(pool->threads);
+    task_queue_destroy(&pool->task_queue);
+}
+
+#endif // THREAD_POOL_H
+```
+
+#### 3. 使用`epoll`监听网络事件
+
+最后，我们使用`epoll`来监听网络事件，并将事件处理任务添加到线程池中。如果`epoll_wait`超时，我们将处理任务队列中的任务。
+
+```c
+
+
+#include "thread_pool.h"
+#include <sys/epoll.h>
+#include <unistd.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+
+#define MAX_EVENTS 10
+#define PORT 8080
+#define EPOLL_TIMEOUT 10000 // 10 seconds
+
+void handle_client(void *arg) {
+    int client_fd = *(int *)arg;
+    char buffer[1024];
+    int bytes_read = read(client_fd, buffer, sizeof(buffer) - 1);
+    if (bytes_read > 0) {
+        buffer[bytes_read] = '\0';
+        printf("Received: %s\n", buffer);
+        write(client_fd, buffer, bytes_read);
+    }
+    close(client_fd);
+    free(arg);
+}
+
+void handle_timeout(void *arg) {
+    printf("Handling timeout task\n");
+    // 处理超时任务
+}
+
+int main() {
+    int server_fd, epoll_fd;
+    struct sockaddr_in server_addr;
+    struct epoll_event ev, events[MAX_EVENTS];
+
+    server_fd = socket(AF_INET, SOCK_STREAM, 0);
+    if (server_fd == -1) {
+        perror("socket");
+        exit(EXIT_FAILURE);
+    }
+
+    memset(&server_addr, 0, sizeof(server_addr));
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_addr.s_addr = INADDR_ANY;
+    server_addr.sin_port = htons(PORT);
+
+    if (bind(server_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) == -1) {
+        perror("bind");
+        close(server_fd);
+        exit(EXIT_FAILURE);
+    }
+
+    if (listen(server_fd, 10) == -1) {
+        perror("listen");
+        close(server_fd);
+        exit(EXIT_FAILURE);
+    }
+
+    epoll_fd = epoll_create1(0);
+    if (epoll_fd == -1) {
+        perror("epoll_create1");
+        close(server_fd);
+        exit(EXIT_FAILURE);
+    }
+
+    ev.events = EPOLLIN;
+    ev.data.fd = server_fd;
+    if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, server_fd, &ev) == -1) {
+        perror("epoll_ctl");
+        close(server_fd);
+        close(epoll_fd);
+        exit(EXIT_FAILURE);
+    }
+
+    thread_pool_t pool;
+    thread_pool_init(&pool, 4);
+
+    while (1) {
+        int nfds = epoll_wait(epoll_fd, events, MAX_EVENTS, EPOLL_TIMEOUT);
+        if (nfds == -1) {
+            perror("epoll_wait");
+            break;
+        }
+
+        if (nfds == 0) {
+            // 超时处理
+            thread_pool_add_task(&pool, handle_timeout, NULL);
+        } else {
+            for (int i = 0; i < nfds; i++) {
+                if (events[i].data.fd == server_fd) {
+                    int client_fd = accept(server_fd, NULL, NULL);
+                    if (client_fd == -1) {
+                        perror("accept");
+                        continue;
+                    }
+
+                    int *pclient_fd = malloc(sizeof(int));
+                    *pclient_fd = client_fd;
+                    thread_pool_add_task(&pool, handle_client, pclient_fd);
+                }
+            }
+        }
+    }
+
+    thread_pool_destroy(&pool);
+    close(server_fd);
+    close(epoll_fd);
+    return 0;
+}
+```
+
+### 文本图描述整体架构
+
+```plaintext
++---------------------+
+|  Main Thread        |
+|  - Creates server   |
+|    socket           |
+|  - Sets up epoll    |
+|  - Adds server fd   |
+|    to epoll         |
++---------------------+
+          |
+          v
++---------------------+
+|  epoll_wait Loop    |
+|  - Waits for events |
+|  - Accepts new      |
+|    connections      |
+|  - Adds tasks to    |
+|    thread pool      |
+|  - Handles timeout  |
+|    tasks            |
++---------------------+
+          |
+          v
++---------------------+
+|  Thread Pool        |
+|  - Worker threads   |
+|  - Task queue       |
+|  - Executes tasks   |
++---------------------+
+          |
+          v
++---------------------+
+|  Task: handle_client|
+|  - Reads data       |
+|  - Writes response  |
+|  - Closes client fd |
++---------------------+
+          |
+          v
++---------------------+
+|  Task: handle_timeout|
+|  - Handles timeout  |
+|    specific tasks   |
++---------------------+
+```
+
+### 总结
+
+通过上述代码和文本图，我们实现了一个使用`epoll`监听网络事件，并使用线程池和任务队列来处理并发任务的C语言程序。我们设置了`epoll_wait`的超时时间为10秒，如果在这段时间内没有网络事件，就处理任务队列中的任务。主线程只管理从线程并分发任务到从线程，从线程处理各类事件。这种架构模拟了Go语言的并发调度机制，能够高效地处理大量并发连接。
+
+Similar code found with 1 license type
+
+To simulate Go's concurrency model using C with `epoll` for network event listening and a queue for asynchronous tasks, we can follow these steps:
+
+1. Set up `epoll` to monitor network events.
+2. Use a queue to manage asynchronous tasks.
+3. Implement a master-worker thread model where the master thread manages worker threads and distributes tasks.
+4. Worker threads handle both network events and queued tasks.
+
+Here is a simplified implementation in C:
+
+### Step 1: Include necessary headers
+```c
+#include <stdio.h>
+#include <stdlib.h>
+#include <pthread.h>
+#include <sys/epoll.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <errno.h>
+#include <string.h>
+#include <time.h>
+```
+
+### Step 2: Define constants and structures
+```c
+#define MAX_EVENTS 10
+#define QUEUE_SIZE 100
+
+typedef struct {
+    void (*function)(void*);
+    void *arg;
+} task_t;
+
+typedef struct {
+    task_t tasks[QUEUE_SIZE];
+    int front;
+    int rear;
+    pthread_mutex_t lock;
+    pthread_cond_t cond;
+} task_queue_t;
+
+typedef struct {
+    int epoll_fd;
+    task_queue_t *task_queue;
+} worker_args_t;
+```
+
+### Step 3: Implement task queue functions
+```c
+void init_queue(task_queue_t *queue) {
+    queue->front = 0;
+    queue->rear = 0;
+    pthread_mutex_init(&queue->lock, NULL);
+    pthread_cond_init(&queue->cond, NULL);
+}
+
+int enqueue(task_queue_t *queue, task_t task) {
+    pthread_mutex_lock(&queue->lock);
+    if ((queue->rear + 1) % QUEUE_SIZE == queue->front) {
+        pthread_mutex_unlock(&queue->lock);
+        return -1; // Queue is full
+    }
+    queue->tasks[queue->rear] = task;
+    queue->rear = (queue->rear + 1) % QUEUE_SIZE;
+    pthread_cond_signal(&queue->cond);
+    pthread_mutex_unlock(&queue->lock);
+    return 0;
+}
+
+int dequeue(task_queue_t *queue, task_t *task) {
+    pthread_mutex_lock(&queue->lock);
+    while (queue->front == queue->rear) {
+        pthread_cond_wait(&queue->cond, &queue->lock);
+    }
+    *task = queue->tasks[queue->front];
+    queue->front = (queue->front + 1) % QUEUE_SIZE;
+    pthread_mutex_unlock(&queue->lock);
+    return 0;
+}
+```
+
+### Step 4: Implement worker thread function
+```c
+void* worker_thread(void *arg) {
+    worker_args_t *args = (worker_args_t*)arg;
+    struct epoll_event events[MAX_EVENTS];
+    int timeout = 10000; // 10 seconds
+
+    while (1) {
+        int n = epoll_wait(args->epoll_fd, events, MAX_EVENTS, timeout);
+        if (n == -1) {
+            perror("epoll_wait");
+            continue;
+        } else if (n == 0) {
+            // Timeout, process task queue
+            task_t task;
+            while (dequeue(args->task_queue, &task) == 0) {
+                task.function(task.arg);
+            }
+        } else {
+            // Process network events
+            for (int i = 0; i < n; i++) {
+                // Handle network event
+                printf("Network event on fd %d\n", events[i].data.fd);
+            }
+        }
+    }
+    return NULL;
+}
+```
+
+### Step 5: Implement master thread function
+```c
+void* master_thread(void *arg) {
+    worker_args_t *worker_args = (worker_args_t*)arg;
+    pthread_t worker;
+    pthread_create(&worker, NULL, worker_thread, worker_args);
+    pthread_detach(worker);
+
+    // Simulate adding tasks to the queue
+    while (1) {
+        task_t task;
+        task.function = [](void *arg) { printf("Processing task\n"); };
+        task.arg = NULL;
+        enqueue(worker_args->task_queue, task);
+        sleep(1);
+    }
+    return NULL;
+}
+```
+
+### Step 6: Main function to set up epoll and start threads
+```c
+int main() {
+    int epoll_fd = epoll_create1(0);
+    if (epoll_fd == -1) {
+        perror("epoll_create1");
+        exit(EXIT_FAILURE);
+    }
+
+    task_queue_t task_queue;
+    init_queue(&task_queue);
+
+    worker_args_t worker_args;
+    worker_args.epoll_fd = epoll_fd;
+    worker_args.task_queue = &task_queue;
+
+    pthread_t master;
+    pthread_create(&master, NULL, master_thread, &worker_args);
+    pthread_join(master, NULL);
+
+    close(epoll_fd);
+    return 0;
+}
+```
+
+### Architecture Diagram
+```
++------------------+
+|   Master Thread  |
+|------------------|
+| - Manages worker |
+| - Distributes    |
+|   tasks          |
++--------+---------+
+         |
+         v
++--------+---------+
+|  Worker Thread   |
+|------------------|
+| - Handles network|
+|   events using   |
+|   epoll          |
+| - Processes task |
+|   queue          |
++------------------+
+```
+
+This code sets up a basic master-worker model where the master thread manages worker threads and distributes tasks. The worker threads use `epoll` to handle network events and process tasks from a queue. The `epoll_wait` function is set with a 10-second timeout to periodically check and process tasks from the queue.

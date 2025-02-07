@@ -1,4 +1,4 @@
-FROM python:3.10
+FROM python:latest
 
 RUN groupadd vscode \
     && useradd -m -g vscode -s /bin/bash vscode

@@ -46,5 +46,5 @@
     "--privileged"
   ],
   "postCreateCommand": "mkdir -p /workspaces/go/myroot;export GOROOT=/workspace/go/myroot;export PATH=$PATH:$GOROOT/bin;export GOROOT_BOOTSTRAP=/workspaces/go/GO_ROOT/go",
-  "remoteUser": "vscode"
+  // "remoteUser": "vscode"
 }

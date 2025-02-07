@@ -1,0 +1,47 @@
+这个错误提示你需要一个已有的Go安装来引导构建Go源码。你可以按照以下步骤解决这个问题：
+
+### 步骤 1: 安装一个工作版本的Go
+1. 下载并安装一个稳定版本的Go（例如1.17.2）：
+   ```sh
+   wget https://golang.org/dl/go1.17.2.linux-amd64.tar.gz
+   sudo tar -C /usr/local -xzf go1.17.2.linux-amd64.tar.gz
+   ```
+2. 设置环境变量：
+   ```sh
+   echo "export PATH=$PATH:/usr/local/go/bin" >> ~/.profile
+   source ~/.profile
+   ```
+
+### 步骤 2: 设置 `GOROOT_BOOTSTRAP`
+1. 设置 `GOROOT_BOOTSTRAP` 环境变量指向你刚安装的Go版本：
+   ```sh
+   echo "export GOROOT_BOOTSTRAP=/usr/local/go" >> ~/.profile
+   source ~/.profile
+   ```
+
+### 步骤 3: 克隆并构建Go源码
+1. 克隆Go语言的源码仓库：
+   ```sh
+   git clone https://go.googlesource.com/go
+   cd go/src
+   ```
+2. 构建Go源码：
+   ```sh
+   ./make.bash
+   ```
+
+### 步骤 4: 设置新的Go环境变量
+1. 设置新的Go环境变量：
+   ```sh
+   echo "export GOROOT=$(pwd)/.." >> ~/.profile
+   echo "export PATH=$PATH:$GOROOT/bin" >> ~/.profile
+   source ~/.profile
+   ```
+
+### 步骤 5: 验证安装
+1. 验证Go安装是否成功：
+   ```sh
+   go version
+   ```
+
+通过以上步骤，你应该能够解决`GOROOT_BOOTSTRAP`相关的问题并成功构建Go源码。
